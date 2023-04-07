@@ -1,79 +1,79 @@
+import debounce from 'lodash.debounce';
+import { Notify } from 'notiflix/build/notiflix-notify-aio';
+import { fetchCountries } from './fetchCountries';
 import './css/styles.css';
-import { CountryApiService } from './fetchCountries';
-import Notiflix from 'notiflix';
-const debounce = require('lodash.debounce');
 
 const DEBOUNCE_DELAY = 300;
 
 const countryListEl = document.querySelector('.country-list');
-const inputEl = countryListEl.previousElementSibling;
-const countryCardEl = countryListEl.nextElementSibling;
+const countryInfoEl = document.querySelector('.country-info');
+const inputSearchCountryEl = document.querySelector('input#search-box');
 
-const countryApiService = new CountryApiService();
-
-const clearHTML = () => {
+const renderItemsCountry = (flags, name) => {
+  return `<li class="country-item">
+            <div class="thumb">
+                <img src=${flags.svg} alt="flag" width='30' height='20' />
+            </div>
+            <p class="country-text">${name.official}</p>
+          </li>`;
+};
+const renderOneCountry = (flags, name, capital, population, languages) => {
+  return `
+        <div class="thumb">
+            <img src=${flags.svg} alt="flag" />
+        </div>
+        <span class="name_country">${name.official}</span>
+        <p><span class="name_item">Capital:    </span>${capital}</p>
+        <p><span class="name_item">Population: </span>${population}</p>
+        <p><span class="name_item">Languages:  </span>${Object.values(
+          languages
+        )}</p>
+      `;
+};
+const resetRender = () => {
   countryListEl.innerHTML = '';
-  countryCardEl.innerHTML = '';
+  countryInfoEl.innerHTML = '';
 };
 
-const displayCountryList = countries => {
-  const markup = countries
-    .map(country => {
-      const { name, flags } = country;
-      return `<li class="country-item">
-        <img class="country-img" src='${flags.svg}' width='30' height='20'>
-        <p class="country-text">${name.official}</p>
-      </li>`;
-    })
+const getCountriesForRender = countries => {
+  const countriesItems = countries
+    .map(({ flags, name }) => renderItemsCountry(flags, name))
     .join('');
-  countryListEl.innerHTML = markup;
+  countryListEl.insertAdjacentHTML('afterbegin', countriesItems);
 };
 
-const displayCountryCard = countries => {
-  countryListEl.firstElementChild.lastElementChild.classList.add(
-    'country-text-card'
-  );
-  const markupCard = countries
-    .map(country => {
-      const { capital, population, languages } = country;
-      const countryLanguage = Object.values(languages);
-      return `<p><span>Capital:</span> ${capital}</p>
-            <p><span>Population:</span> ${population}</p>
-            <p><span>Lenguages:</span> ${countryLanguage.join(', ')}</p>`;
-    })
+const getOneCountryForRender = countries => {
+  const oneContryItem = countries
+    .map(({ flags, name, capital, population, languages }) =>
+      renderOneCountry(flags, name, capital, population, languages)
+    )
     .join('');
-  countryCardEl.innerHTML = markupCard;
+  countryInfoEl.insertAdjacentHTML('afterbegin', oneContryItem);
 };
 
-const handleSearchCountries = event => {
-  const nameCountry = event.target.value.trim();
-  if (nameCountry === '') {
-    clearHTML();
-    return;
-  }
-  countryApiService
-    .fetchCountries(nameCountry)
+const infoTooManyCountries = () =>
+  Notify.info('Too many matches found. Please enter a more specific name.');
+const errorRespons = () =>
+  Notify.failure('Oops, there is no country with that name');
+
+const handleInputSearchCountry = e => {
+  const nameCountry = e.target.value.trim();
+  resetRender();
+  if (nameCountry === '') return;
+  fetchCountries(nameCountry)
     .then(countries => {
-      if (countries.length > 10) {
-        Notiflix.Notify.info(
-          'Too many matches found. Please enter a more specific name.'
-        );
-        return;
-      }
-      if (2 <= countries.length <= 10) {
-        displayCountryList(countries);
-      }
       if (countries.length === 1) {
-        displayCountryCard(countries);
+        getOneCountryForRender(countries);
+      } else if (countries.length > 1 && countries.length <= 10) {
+        getCountriesForRender(countries);
+      } else if (countries.length > 10) {
+        infoTooManyCountries();
       }
     })
-    .catch(error => {
-      clearHTML();
-      Notiflix.Notify.failure('Oops, there is no country with that name');
-    });
+    .catch(error => errorRespons());
 };
 
-inputEl.addEventListener(
+inputSearchCountryEl.addEventListener(
   'input',
-  debounce(handleSearchCountries, DEBOUNCE_DELAY)
+  debounce(handleInputSearchCountry, DEBOUNCE_DELAY)
 );

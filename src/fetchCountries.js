@@ -1,14 +1,14 @@
-export class CountryApiService {
-  #BASE_URL = 'https://restcountries.com/v3.1/name/';
+import { Notify } from 'notiflix/build/notiflix-notify-aio';
+const API_DEFAULT = 'https://restcountries.com/v3.1/';
 
-  fetchCountries(name) {
-    return fetch(
-      `${this.#BASE_URL}${name}?fields=name,capital,population,flags,languages`
-    ).then(response => {
-      if (!response.ok) {
-        throw new Error(response.status);
-      }
-      return response.json();
-    });
-  }
-}
+export const fetchCountries = name => {
+  return fetch(
+    `${API_DEFAULT}name/${name}?fields=name,capital,population,flags,languages`
+  ).then(response => {
+    if (!response.ok) {
+      Notify.failure('Oops, there is no country with that name');
+    }
+
+    return response.json();
+  });
+};
